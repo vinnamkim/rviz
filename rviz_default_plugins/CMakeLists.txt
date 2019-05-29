@@ -60,6 +60,7 @@ find_package(rviz_visual_testing_framework REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets Test)
 
 find_package(geometry_msgs REQUIRED)
+find_package(interactive_markers REQUIRED)
 find_package(laser_geometry REQUIRED)
 find_package(map_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -79,6 +80,9 @@ set(rviz_default_plugins_headers_to_moc
   include/rviz_default_plugins/displays/grid_cells/grid_cells_display.hpp
   include/rviz_default_plugins/displays/illuminance/illuminance_display.hpp
   include/rviz_default_plugins/displays/image/image_display.hpp
+  include/rviz_default_plugins/displays/interactive_markers/integer_action.hpp
+  include/rviz_default_plugins/displays/interactive_markers/interactive_marker.hpp
+  include/rviz_default_plugins/displays/interactive_markers/interactive_marker_display.hpp
   include/rviz_default_plugins/displays/laser_scan/laser_scan_display.hpp
   include/rviz_default_plugins/displays/map/map_display.hpp
   include/rviz_default_plugins/displays/marker/marker_common.hpp
@@ -133,6 +137,10 @@ set(rviz_default_plugins_source_files
   src/rviz_default_plugins/displays/illuminance/illuminance_display.cpp
   src/rviz_default_plugins/displays/image/image_display.cpp
   src/rviz_default_plugins/displays/image/ros_image_texture.cpp
+  src/rviz_default_plugins/displays/interactive_markers/integer_action.cpp
+  src/rviz_default_plugins/displays/interactive_markers/interactive_marker.cpp
+  src/rviz_default_plugins/displays/interactive_markers/interactive_marker_control.cpp
+  src/rviz_default_plugins/displays/interactive_markers/interactive_marker_display.cpp
   src/rviz_default_plugins/displays/laser_scan/laser_scan_display.cpp
   src/rviz_default_plugins/displays/map/map_display.cpp
   src/rviz_default_plugins/displays/map/palette_builder.cpp
@@ -239,6 +247,7 @@ pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
 
 ament_target_dependencies(rviz_default_plugins
   geometry_msgs
+  interactive_markers
   laser_geometry
   nav_msgs
   map_msgs

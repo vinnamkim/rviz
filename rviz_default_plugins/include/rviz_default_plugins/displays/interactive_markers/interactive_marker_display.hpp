@@ -27,60 +27,66 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RVIZ_INTERACTIVE_MARKER_DISPLAY_H
-#define RVIZ_INTERACTIVE_MARKER_DISPLAY_H
+#ifndef RVIZ_DEFAULT_PLUGINS__DISPLAYS__INTERACTIVE_MARKERS__INTERACTIVE_MARKER_DISPLAY_H_
+#define RVIZ_DEFAULT_PLUGINS__DISPLAYS__INTERACTIVE_MARKERS__INTERACTIVE_MARKER_DISPLAY_H_
 
 #include <map>
 #include <set>
 
-#include <visualization_msgs/InteractiveMarker.h>
-#include <visualization_msgs/InteractiveMarkerUpdate.h>
-#include <visualization_msgs/InteractiveMarkerInit.h>
-
-#ifndef Q_MOC_RUN
-#include <message_filters/subscriber.h>
-#include <tf/message_filter.h>
 #include <interactive_markers/interactive_marker_client.h>
-#endif
 
-#include "rviz/display.h"
-#include "rviz/selection/forwards.h"
+#include <visualization_msgs/msg/interactive_marker.hpp>
+#include <visualization_msgs/msg/interactive_marker_update.hpp>
+#include <visualization_msgs/msg/interactive_marker_init.hpp>
 
-#include "rviz/default_plugin/interactive_markers/interactive_marker.h"
+#include "rviz_common/display.hpp"
+#include "rviz_common/interaction/forwards.hpp"
+#include "rviz_common/ros_topic_display.hpp"
 
-namespace rviz
+#include "rviz_default_plugins/visibility_control.hpp"
+
+#include "rviz_default_plugins/displays/interactive_markers/interactive_marker.hpp"
+
+namespace rviz_common {
+namespace properties {
+class BoolProperty;
+}
+}
+
+
+namespace rviz_default_plugins
+{
+namespace displays
 {
 class BoolProperty;
-class Object;
-class RosTopicProperty;
-class MarkerBase;
+// class Object;
+// class RosTopicProperty;
+// class MarkerBase;
 
-typedef boost::shared_ptr<MarkerBase> MarkerBasePtr;
-typedef std::pair<std::string, int32_t> MarkerID;
+// typedef std::shared_ptr<MarkerBase> MarkerBasePtr;
+// typedef std::pair<std::string, int32_t> MarkerID;
 
 /**
  * \class InteractiveMarkerDisplay
  * \brief Displays Interactive Markers
  */
-class InteractiveMarkerDisplay : public Display
+class RVIZ_DEFAULT_PLUGINS_PUBLIC InteractiveMarkerDisplay : public rviz_common::RosTopicDisplay<visualization_msgs::msg::InteractiveMarkerUpdate>
 {
-Q_OBJECT
+  Q_OBJECT
 public:
   InteractiveMarkerDisplay();
 
-  virtual void onInitialize();
+  void onInitialize() override;
 
-  virtual void update(float wall_dt, float ros_dt);
+  void update(float wall_dt, float ros_dt) override;
 
-  virtual void fixedFrameChanged();
-
-  virtual void reset();
-
-  virtual void setTopic( const QString &topic, const QString &datatype );
+  void reset() override;
 
 protected:
-  virtual void onEnable();
-  virtual void onDisable();
+  void subscribe() override;
+  void unsubscribe() override;
+  void fixedFrameChanged() override;
+  void processMessage(visualization_msgs::msg::InteractiveMarkerUpdate::ConstSharedPtr msg ) override;
 
 protected Q_SLOTS:
   void updateTopic();
@@ -88,44 +94,37 @@ protected Q_SLOTS:
   void updateShowAxes();
   void updateShowVisualAids();
   void updateEnableTransparency();
-  void publishFeedback(visualization_msgs::InteractiveMarkerFeedback &feedback);
-  void onStatusUpdate( StatusProperty::Level level, const std::string& name, const std::string& text );
+  void publishFeedback(visualization_msgs::msg::InteractiveMarkerFeedback &feedback);
+  void onStatusUpdate( rviz_common::properties::StatusProperty::Level level, const std::string& name, const std::string& text );
 
 private:
-
-  // Subscribe to all message topics
-  void subscribe();
-
-  // Unsubscribe from all message topics
-  void unsubscribe();
-
-  void initCb( visualization_msgs::InteractiveMarkerInitConstPtr msg );
-  void updateCb( visualization_msgs::InteractiveMarkerUpdateConstPtr msg );
+  void initCb( visualization_msgs::msg::InteractiveMarkerInit::ConstSharedPtr msg );
+  void updateCb( visualization_msgs::msg::InteractiveMarkerUpdate::ConstSharedPtr msg );
 
   void resetCb( std::string server_id );
 
-  void statusCb( interactive_markers::InteractiveMarkerClient::StatusT,
+  void statusCb( ::interactive_markers::InteractiveMarkerClient::StatusT,
       const std::string& server_id,
       const std::string& msg );
 
   void updateMarkers(
       const std::string& server_id,
-      const std::vector<visualization_msgs::InteractiveMarker>& markers );
+      const std::vector<visualization_msgs::msg::InteractiveMarker>& markers );
 
   void updatePoses(
       const std::string& server_id,
-      const std::vector<visualization_msgs::InteractiveMarkerPose>& marker_poses );
+      const std::vector<visualization_msgs::msg::InteractiveMarkerPose>& marker_poses );
 
   void eraseMarkers(
       const std::string& server_id,
       const std::vector<std::string>& names );
 
   // Update the display's versions of the markers.
-  void processMarkerChanges( const std::vector<visualization_msgs::InteractiveMarker>* markers = NULL,
-                             const std::vector<visualization_msgs::InteractiveMarkerPose>* poses = NULL,
+  void processMarkerChanges( const std::vector<visualization_msgs::msg::InteractiveMarker>* markers = NULL,
+                             const std::vector<visualization_msgs::msg::InteractiveMarkerPose>* poses = NULL,
                              const std::vector<std::string>* erases = NULL );
 
-  typedef boost::shared_ptr<InteractiveMarker> IMPtr;
+  typedef std::shared_ptr<interactive_markers::InteractiveMarker> IMPtr;
   typedef std::map< std::string, IMPtr > M_StringToIMPtr;
   typedef std::map< std::string, M_StringToIMPtr > M_StringToStringToIMPtr;
   M_StringToStringToIMPtr interactive_markers_;
@@ -135,19 +134,19 @@ private:
   std::string client_id_;
 
   // Properties
-  RosTopicProperty* marker_update_topic_property_;
+  //RosTopicProperty* marker_update_topic_property_;
   BoolProperty* show_descriptions_property_;
   BoolProperty* show_axes_property_;
   BoolProperty* show_visual_aids_property_;
   BoolProperty* enable_transparency_property_;
 
-  boost::shared_ptr<interactive_markers::InteractiveMarkerClient> im_client_;
+  std::shared_ptr<::interactive_markers::InteractiveMarkerClient> im_client_;
 
-  ros::Publisher feedback_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::InteractiveMarkerFeedback>::SharedPtr feedback_pub_;
 
   std::string topic_ns_;
 };
-
-} // namespace rviz
+}
+}
 
 #endif /* RVIZ_MARKER_DISPLAY_H */

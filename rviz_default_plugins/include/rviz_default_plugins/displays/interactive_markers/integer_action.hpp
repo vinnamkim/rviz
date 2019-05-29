@@ -26,14 +26,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef INTEGER_ACTION_H
-#define INTEGER_ACTION_H
+#ifndef RVIZ_DEFAULT_PLUGINS__DISPLAYS__INTERACTIVE_MARKERS__INTEGER_ACTION_HPP_
+#define RVIZ_DEFAULT_PLUGINS__DISPLAYS__INTERACTIVE_MARKERS__INTEGER_ACTION_HPP_
 
 #include <QAction>
 
-namespace rviz
+namespace rviz_default_plugins
 {
-
+namespace displays
+{
+namespace interactive_markers
+{
 /** A simple subclass of QAction which keeps an ID number and emits a
  * signal with that number when it is triggered.
  */
@@ -50,7 +53,8 @@ Q_SIGNALS:
 private Q_SLOTS:
   void emitId();
 };
-
-} // end namespace rviz
+} // end namespace interactive_markers
+} // end namespace display
+} // end namespace rviz_default_plugins
 
 #endif // INTEGER_ACTION_H

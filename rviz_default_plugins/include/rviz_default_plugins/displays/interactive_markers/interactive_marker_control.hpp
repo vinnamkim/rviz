@@ -27,57 +27,66 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef INTERACTIVE_MARKER_CONTROL_H_
-#define INTERACTIVE_MARKER_CONTROL_H_
-
-
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
+#ifndef RVIZ_DEFAULT_PLUGINS__DISPLAYS__INTERACTIVE_MARKERS__INTERACTIVE_MARKER_CONTROL_H_
+#define RVIZ_DEFAULT_PLUGINS__DISPLAYS__INTERACTIVE_MARKERS__INTERACTIVE_MARKER_CONTROL_H_
 
 #include <OgreRay.h>
 #include <OgreVector3.h>
 #include <OgreQuaternion.h>
 #include <OgreSceneManager.h>
-#endif
 
 #include <QCursor>
 
-#include <visualization_msgs/InteractiveMarkerControl.h>
+#include <visualization_msgs/msg/interactive_marker_control.hpp>
 
-#include "rviz/default_plugin/markers/marker_base.h"
-#include "rviz/selection/forwards.h"
-#include "rviz/viewport_mouse_event.h"
-#include "rviz/interactive_object.h"
+#include "rviz_default_plugins/displays/marker/markers/marker_base.hpp"
+#include "rviz_common/interaction/forwards.hpp"
+#include "rviz_common/viewport_mouse_event.hpp"
+#include "rviz_common/interactive_object.hpp"
 
 namespace Ogre
 {
   class SceneNode;
 }
 
-namespace rviz
+namespace rviz_rendering
 {
-class DisplayContext;
+  class Line;
+}
+
+namespace rviz_common
+{
+  class DisplayContext;
+}
+
+namespace rviz_default_plugins
+{
+namespace displays
+{
+namespace markers
+{
+  class PointsMarker;
+}
+namespace interactive_markers
+{
 class InteractiveMarker;
-class PointsMarker;
-class Line;
 
 /**
  * A single control element of an InteractiveMarker.
  */
 class InteractiveMarkerControl: public Ogre::SceneManager::Listener,
-                                public InteractiveObject,
-                                public boost::enable_shared_from_this<InteractiveMarkerControl>
+                                public rviz_common::InteractiveObject,
+                                public std::enable_shared_from_this<InteractiveMarkerControl>
 {
 public:
   /** @brief Constructor.
    *
    * Just creates Ogre::SceneNodes and sets some defaults.  To
    * actually make it look like a
-   * visualization_msgs::InteractiveMarkerControl message specifies,
+   * visualization_msgs::msg::InteractiveMarkerControl message specifies,
    * call processMessage().
    */
-  InteractiveMarkerControl( DisplayContext* context,
+  InteractiveMarkerControl( rviz_common::DisplayContext* context,
                             Ogre::SceneNode *reference_node,
                             InteractiveMarker *parent );
 
@@ -85,25 +94,25 @@ public:
 
   /** @brief Set up or update the contents of this control to match the
    *         specification in the message. */
-  void processMessage( const visualization_msgs::InteractiveMarkerControl &message );
+  void processMessage( const visualization_msgs::msg::InteractiveMarkerControl &message );
 
   // called when interactive mode is globally switched on/off
   virtual void enableInteraction(bool enable);
 
   // will receive all mouse events while the handler has focus
-  virtual void handleMouseEvent(ViewportMouseEvent& event);
+  virtual void handleMouseEvent(rviz_common::ViewportMouseEvent& event);
 
   /**
    * This is the main entry-point for interaction using a 3D cursor.
    * <p>
-   * The ViewportMouseEvent struct is used to "fake" a mouse event.
+   * The rviz_common::ViewportMouseEvent struct is used to "fake" a mouse event.
    * An event must have the panel, viewport, and type members filled in.
    * The acting_button and buttons_down members can be specified as well, if appropriate.
    * All other fields are currently ignored.
    * <p>
    * A sample construction of a "right-button mouse-up" event:
    * @code
-   * ViewportMouseEvent event;
+   * rviz_common::ViewportMouseEvent event;
    * event.panel = context_->getViewManager()->getRenderPanel();
    * event.viewport = context_->getViewManager()->getRenderPanel()->getRenderWindow()->getViewport(0);
    * event.type = QEvent::MouseButtonRelease;
@@ -118,7 +127,7 @@ public:
    * @param  cursor_rot   The world-relative orientation of the 3D cursor.
    * @param  control_name The name of the child InteractiveMarkerControl calling this function.
    */
-  virtual void handle3DCursorEvent( ViewportMouseEvent event, const Ogre::Vector3& cursor_3D_pos, const Ogre::Quaternion& cursor_3D_orientation);
+  virtual void handle3DCursorEvent( rviz_common::ViewportMouseEvent event, const Ogre::Vector3& cursor_3D_pos, const Ogre::Quaternion& cursor_3D_orientation);
 
   /** Update the pose of the interactive marker being controlled,
    * relative to the reference frame.  Each InteractiveMarkerControl
@@ -127,7 +136,7 @@ public:
    * function on all its child controls. */
   void interactiveMarkerPoseChanged( Ogre::Vector3 int_marker_position, Ogre::Quaternion int_marker_orientation );
 
-  bool isInteractive() { return interaction_mode_ != visualization_msgs::InteractiveMarkerControl::NONE; }
+  bool isInteractive() { return interaction_mode_ != visualization_msgs::msg::InteractiveMarkerControl::NONE; }
 
   // Called every frame by parent's update() function.
   void update();
@@ -160,12 +169,12 @@ public:
   const QString& getDescription() { return description_; }
 
   /**
-   * @return the visualization_msgs::InteractiveMarkerControl interaction_mode for this control
+   * @return the visualization_msgs::msg::InteractiveMarkerControl interaction_mode for this control
    */
   int getInteractionMode() { return interaction_mode_; }
 
   /**
-   * @return the visualization_msgs::InteractiveMarkerControl orientation_mode for this control
+   * @return the visualization_msgs::msg::InteractiveMarkerControl orientation_mode for this control
    */
   int getOrientationMode() { return orientation_mode_; }
 
@@ -183,29 +192,29 @@ protected:
 
   /** calculate a mouse ray in the reference frame.
    *  A mouse ray is a ray starting at the camera and pointing towards the mouse position. */
-  Ogre::Ray getMouseRayInReferenceFrame( const ViewportMouseEvent& event, int x, int y );
+  Ogre::Ray getMouseRayInReferenceFrame( const rviz_common::ViewportMouseEvent& event, int x, int y );
 
   /** begin a relative-motion drag. */
-  void beginRelativeMouseMotion( const ViewportMouseEvent& event );
+  void beginRelativeMouseMotion( const rviz_common::ViewportMouseEvent& event );
 
   /** get the relative motion of the mouse, and put the mouse back
    *  where it was when beginRelativeMouseMotion() was called. */
-  bool getRelativeMouseMotion( const ViewportMouseEvent& event, int& dx, int& dy );
+  bool getRelativeMouseMotion( const rviz_common::ViewportMouseEvent& event, int& dx, int& dy );
 
   /** Rotate the pose around the camera-frame XY (right/up) axes, based on relative mouse movement. */
-  void rotateXYRelative( const ViewportMouseEvent& event );
+  void rotateXYRelative( const rviz_common::ViewportMouseEvent& event );
 
   /** Rotate the pose around the camera-frame Z (look) axis, based on relative mouse movement. */
-  void rotateZRelative( const ViewportMouseEvent& event );
+  void rotateZRelative( const rviz_common::ViewportMouseEvent& event );
 
   /** Move the pose along the mouse ray, based on relative mouse movement. */
-  void moveZAxisRelative( const ViewportMouseEvent& event );
+  void moveZAxisRelative( const rviz_common::ViewportMouseEvent& event );
 
   /** Move the pose along the mouse ray, based on mouse wheel movement. */
-  void moveZAxisWheel( const ViewportMouseEvent& event );
+  void moveZAxisWheel( const rviz_common::ViewportMouseEvent& event );
 
   /** Move the pose around the XY view plane (perpendicular to the camera direction). */
-  void moveViewPlane( Ogre::Ray &mouse_ray, const ViewportMouseEvent& event );
+  void moveViewPlane( Ogre::Ray &mouse_ray, const rviz_common::ViewportMouseEvent& event );
 
   /** Rotate the pose around the local X-axis, following the mouse movement.
    *  mouse_ray is relative to the reference frame. */
@@ -230,7 +239,7 @@ protected:
 
   /** Translate along the local X-axis, following the mouse movement.
    *  mouse_ray is relative to the reference frame. */
-  void moveAxis( const Ogre::Ray& mouse_ray, const ViewportMouseEvent& event );
+  void moveAxis( const Ogre::Ray& mouse_ray, const rviz_common::ViewportMouseEvent& event );
 
   /** Translate along the local X-axis, following the 3D cursor movement. */
   void moveAxis( const Ogre::Vector3& cursor_position_in_reference_frame );
@@ -275,7 +284,7 @@ protected:
                       Ogre::Vector2& screen_pos );
 
   /// take all the materials, add a highlight pass and store a pointer to the pass for later use
-  void addHighlightPass( S_MaterialPtr materials );
+  void addHighlightPass( markers::S_MaterialPtr materials );
 
   // set the highlight color to (a,a,a)
   void setHighlight( float a );
@@ -283,16 +292,16 @@ protected:
   // Save a copy of the latest mouse event with the event type set to
   // QEvent::MouseMove, so that update() can resend the mouse event during
   // drag actions to maintain consistent behavior.
-  void recordDraggingInPlaceEvent( ViewportMouseEvent& event );
+  void recordDraggingInPlaceEvent( rviz_common::ViewportMouseEvent& event );
 
   // Begin a new mouse motion.  Called when left button is pressed to begin a drag.
-  void beginMouseMovement( ViewportMouseEvent& event, bool line_visible );
+  void beginMouseMovement( rviz_common::ViewportMouseEvent& event, bool line_visible );
 
   // Motion part of mouse event handling.
-  void handleMouseMovement( ViewportMouseEvent& event );
+  void handleMouseMovement( rviz_common::ViewportMouseEvent& event );
 
   // Mouse wheel part of mouse event handling.
-  void handleMouseWheelMovement( ViewportMouseEvent& event );
+  void handleMouseWheelMovement( rviz_common::ViewportMouseEvent& event );
 
   // Return closest point on a line to a test point.
   Ogre::Vector3 closestPointOnLineToPoint( const Ogre::Vector3& line_start,
@@ -300,7 +309,7 @@ protected:
                                            const Ogre::Vector3& test_point );
 
   /** @brief Create marker objects from the message and add them to the internal marker arrays. */
-  void makeMarkers( const visualization_msgs::InteractiveMarkerControl &message );
+  void makeMarkers( const visualization_msgs::msg::InteractiveMarkerControl &message );
 
   void stopDragging( bool force = false );
 
@@ -309,11 +318,11 @@ protected:
   bool mouse_dragging_;
   Ogre::Viewport* drag_viewport_;
 
-  ViewportMouseEvent dragging_in_place_event_;
+  rviz_common::ViewportMouseEvent dragging_in_place_event_;
 
-  DisplayContext* context_;
+  rviz_common::DisplayContext* context_;
 
-  CollObjectHandle coll_object_handle_;
+  rviz_common::interaction::CollObjectHandle coll_object_handle_;
 
   /** Node representing reference frame in tf, like /map, /base_link,
    * /head, etc.  Same as the field in InteractiveMarker. */
@@ -351,7 +360,7 @@ protected:
 
   std::string name_;
 
-  typedef boost::shared_ptr<MarkerBase> MarkerBasePtr;
+  typedef std::shared_ptr<markers::MarkerBase> MarkerBasePtr;
   std::vector< MarkerBasePtr > markers_;
 
   InteractiveMarker *parent_;
@@ -361,7 +370,7 @@ protected:
   // PointsMarkers are rendered by special shader programs, so the
   // regular highlighting method does not work for them.  Keep a
   // vector of them so we can call their setHighlightColor() function.
-  typedef boost::shared_ptr<PointsMarker> PointsMarkerPtr;
+  typedef std::shared_ptr<markers::PointsMarker> PointsMarkerPtr;
   std::vector< PointsMarkerPtr > points_markers_;
 
   /** Stores the rotation around the x axis of the control.  Only
@@ -444,11 +453,11 @@ protected:
 
   bool mouse_down_;
 
-  boost::shared_ptr<Line> line_;
-
   bool show_visual_aids_;
+
+  std::shared_ptr<rviz_rendering::Line> line_;
 };
-
-}
-
+}  // namespace interactive_markers
+}  // namespace display
+}  // namespace rviz_default_plugins
 #endif /* INTERACTIVE_MARKER_CONTROL_H_ */

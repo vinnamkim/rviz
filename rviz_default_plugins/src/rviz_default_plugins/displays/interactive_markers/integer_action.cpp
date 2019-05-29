@@ -26,11 +26,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "integer_action.h"
+#include "rviz_default_plugins/displays/interactive_markers/integer_action.hpp"
 
-namespace rviz
+namespace rviz_default_plugins
 {
-
+namespace displays
+{
+namespace interactive_markers
+{
 IntegerAction::IntegerAction( const QString& text, QObject* parent, int id )
   : QAction( text, parent )
   , id_( id )
@@ -42,6 +45,7 @@ void IntegerAction::emitId()
 {
   Q_EMIT triggered( id_ );
 }
-
+}
+}
 } // end namespace rviz
 

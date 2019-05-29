@@ -39,23 +39,31 @@
 #include <OgreMath.h>
 #include <OgreRenderWindow.h>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <interactive_markers/tools.h>
 
-#include "rviz/frame_manager.h"
-#include "rviz/display_context.h"
-#include "rviz/selection/selection_manager.h"
-#include "rviz/frame_manager.h"
-#include "rviz/render_panel.h"
-#include "rviz/geometry.h"
+#include <tf2_ros/buffer_interface.h>
 
-#include "rviz/default_plugin/interactive_markers/integer_action.h"
-#include "rviz/default_plugin/interactive_markers/interactive_marker.h"
+#include "rviz_common/frame_manager_iface.hpp"
+#include "rviz_common/display_context.hpp"
+#include "rviz_common/interaction/selection_manager.hpp"
+#include "rviz_common/interaction/view_picker.hpp"
+#include "rviz_common/render_panel.hpp"
 
-namespace rviz
+#include "rviz_rendering/geometry.hpp"
+#include "rviz_rendering/render_window.hpp"
+
+#include "rviz_default_plugins/displays/interactive_markers/integer_action.hpp"
+#include "rviz_default_plugins/displays/interactive_markers/interactive_marker.hpp"
+#include "rviz_default_plugins/transformation/tf_wrapper.hpp"
+
+namespace rviz_default_plugins
 {
-
-InteractiveMarker::InteractiveMarker( Ogre::SceneNode* scene_node, DisplayContext* context ) :
+namespace displays
+{
+namespace interactive_markers
+{
+InteractiveMarker::InteractiveMarker( Ogre::SceneNode* scene_node, rviz_common::DisplayContext* context ) :
   context_(context)
 , pose_changed_(false)
 , time_since_last_feedback_(0)
@@ -65,7 +73,7 @@ InteractiveMarker::InteractiveMarker( Ogre::SceneNode* scene_node, DisplayContex
 , show_visual_aids_(false)
 {
   reference_node_ = scene_node->createChildSceneNode();
-  axes_ = new Axes( context->getSceneManager(), reference_node_, 1, 0.05 );
+  axes_ = new rviz_rendering::Axes( context->getSceneManager(), reference_node_, 1, 0.05 );
 }
 
 InteractiveMarker::~InteractiveMarker()
@@ -74,9 +82,10 @@ InteractiveMarker::~InteractiveMarker()
   context_->getSceneManager()->destroySceneNode( reference_node_ );
 }
 
-void InteractiveMarker::processMessage( const visualization_msgs::InteractiveMarkerPose& message )
+void InteractiveMarker::processMessage( const visualization_msgs::msg::InteractiveMarkerPose& message )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+
   Ogre::Vector3 position( message.pose.position.x, message.pose.position.y, message.pose.position.z );
   Ogre::Quaternion orientation( message.pose.orientation.w, message.pose.orientation.x,
       message.pose.orientation.y, message.pose.orientation.z );
@@ -88,15 +97,15 @@ void InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
 
   reference_time_ = message.header.stamp;
   reference_frame_ = message.header.frame_id;
-  frame_locked_ = (message.header.stamp == ros::Time(0));
+  frame_locked_ = (message.header.stamp == rclcpp::Time(0));
 
   requestPoseUpdate( position, orientation );
   context_->queueRender();
 }
 
-bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMarker& message )
+bool InteractiveMarker::processMessage( const visualization_msgs::msg::InteractiveMarker& message )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   // copy values
   name_ = message.name;
@@ -104,7 +113,7 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
 
   if ( message.controls.size() == 0 )
   {
-    Q_EMIT statusUpdate( StatusProperty::Ok, name_, "Marker empty.");
+    Q_EMIT statusUpdate( rviz_common::properties::StatusProperty::Ok, name_, "Marker empty.");
     return false;
   }
 
@@ -112,7 +121,7 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
 
   reference_frame_ = message.header.frame_id;
   reference_time_ = message.header.stamp;
-  frame_locked_ = (message.header.stamp == ros::Time(0));
+  frame_locked_ = (message.header.stamp == rclcpp::Time(0));
 
   position_ = Ogre::Vector3(
       message.pose.position.x,
@@ -162,7 +171,7 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
   // Loop over new array:
   for ( unsigned i = 0; i < message.controls.size(); i++ )
   {
-    const visualization_msgs::InteractiveMarkerControl& control_message = message.controls[ i ];
+    const visualization_msgs::msg::InteractiveMarkerControl& control_message = message.controls[ i ];
     M_ControlPtr::iterator search_iter = controls_.find( control_message.name );
     InteractiveMarkerControlPtr control;
 
@@ -175,7 +184,7 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
     else
     {
       // Else make new control
-      control = boost::make_shared<InteractiveMarkerControl>( context_, reference_node_, this );
+      control = std::make_shared<InteractiveMarkerControl>( context_, reference_node_, this );
       controls_[ control_message.name ] = control;
     }
     // Update the control with the message data
@@ -195,10 +204,11 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
   }
 
   description_control_ =
-    boost::make_shared<InteractiveMarkerControl>( context_,
+    std::make_shared<InteractiveMarkerControl>( context_,
                                                   reference_node_, this );
-
-  description_control_->processMessage( interactive_markers::makeTitle( message ));
+  
+  using ::interactive_markers::makeTitle;
+  description_control_->processMessage( makeTitle( message ));
 
   //create menu
   menu_entries_.clear();
@@ -212,7 +222,7 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
     // tree of menu entry ids.
     for ( unsigned m=0; m < message.menu_entries.size(); m++ )
     {
-      const visualization_msgs::MenuEntry& entry = message.menu_entries[ m ];
+      const visualization_msgs::msg::MenuEntry& entry = message.menu_entries[ m ];
       MenuNode node;
       node.entry = entry;
       menu_entries_[ entry.id ] = node;
@@ -225,7 +235,10 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
         // Find the parent node and add this entry to the parent's list of children.
         std::map< uint32_t, MenuNode >::iterator parent_it = menu_entries_.find( entry.parent_id );
         if( parent_it == menu_entries_.end() ) {
-          ROS_ERROR("interactive marker menu entry %u found before its parent id %u.  Ignoring.", entry.id, entry.parent_id);
+          RVIZ_COMMON_LOG_ERROR_STREAM(
+            "interactive marker menu entry " << entry.id 
+            << "found before its parent id " << entry.parent_id 
+            << ".  Ignoring.");
         }
         else
         {
@@ -240,11 +253,11 @@ bool InteractiveMarker::processMessage( const visualization_msgs::InteractiveMar
   {
     std::ostringstream s;
     s << "Locked to frame " << reference_frame_;
-    Q_EMIT statusUpdate( StatusProperty::Ok, name_, s.str() );
+    Q_EMIT statusUpdate( rviz_common::properties::StatusProperty::Ok, name_, s.str() );
   }
   else
   {
-    Q_EMIT statusUpdate( StatusProperty::Ok, name_, "Position is fixed." );
+    Q_EMIT statusUpdate( rviz_common::properties::StatusProperty::Ok, name_, "Position is fixed." );
   }
   return true;
 }
@@ -258,7 +271,11 @@ void InteractiveMarker::populateMenu( QMenu* menu, std::vector<uint32_t>& ids )
   {
     uint32_t id = ids[ id_index ];
     std::map< uint32_t, MenuNode >::iterator node_it = menu_entries_.find( id );
-    ROS_ASSERT_MSG(node_it != menu_entries_.end(), "interactive marker menu entry %u not found during populateMenu().", id);
+    if(node_it != menu_entries_.end()) {
+      RVIZ_COMMON_LOG_ERROR_STREAM(
+        "interactive marker menu entry " << id <<  " not found during populateMenu()."
+      );
+    }
     MenuNode node = (*node_it).second;
 
     if ( node.child_ids.empty() )
@@ -299,7 +316,7 @@ QString InteractiveMarker::makeMenuString( const std::string &entry )
 
 void InteractiveMarker::updateReferencePose()
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   Ogre::Vector3 reference_position;
   Ogre::Quaternion reference_orientation;
 
@@ -311,33 +328,47 @@ void InteractiveMarker::updateReferencePose()
     if ( reference_frame_ == fixed_frame )
     {
       // if the two frames are identical, we don't need to do anything.
-      // This should be ros::Time::now(), but then the computer running
+      // This should be rclcpp::Clock::now(), but then the computer running
       // RViz has to be time-synced with the server
-      reference_time_ = ros::Time();
+      reference_time_ = rclcpp::Time();
     }
     else
     {
       std::string error;
-      int retval = context_->getFrameManager()->getTFClient()->getLatestCommonTime(
-          reference_frame_, fixed_frame, reference_time_, &error );
-      if ( retval != tf::NO_ERROR )
-      {
-        std::ostringstream s;
-        s <<"Error getting time of latest transform between " << reference_frame_
-            << " and " << fixed_frame << ": " << error << " (error code: " << retval << ")";
-        Q_EMIT statusUpdate( StatusProperty::Error, name_, s.str() );
-        reference_node_->setVisible( false );
-        return;
+      auto tf_wrapper = std::dynamic_pointer_cast<transformation::TFWrapper>(
+        context_->getFrameManager()->getConnector().lock());
+
+      if (tf_wrapper) {
+        std::shared_ptr<tf2::BufferCore> tf_buffer = tf_wrapper->getBuffer();
+        
+        tf2::TimePoint latest_time;
+
+        tf2::TF2Error retval = tf_buffer->_getLatestCommonTime(
+          tf_buffer->_validateFrameId("get_latest_common_time", reference_frame_),
+          tf_buffer->_validateFrameId("get_latest_common_time", fixed_frame),
+          latest_time, &error );
+        
+        reference_time_ = tf2_ros::toMsg(latest_time);
+
+        if ( retval != tf2::TF2Error::NO_ERROR )
+        {
+          std::ostringstream s;
+          s <<"Error getting time of latest transform between " << reference_frame_
+              << " and " << fixed_frame << ": " << error << " (error code: " << (int)retval << ")";
+          Q_EMIT statusUpdate( rviz_common::properties::StatusProperty::Error, name_, s.str() );
+          reference_node_->setVisible( false );
+          return;
+        }
       }
     }
   }
 
-  if (!context_->getFrameManager()->getTransform( reference_frame_, ros::Time(),
+  if (!context_->getFrameManager()->getTransform( reference_frame_, rclcpp::Time(),
       reference_position, reference_orientation ))
   {
     std::string error;
-    context_->getFrameManager()->transformHasProblems(reference_frame_, ros::Time(), error);
-    Q_EMIT statusUpdate( StatusProperty::Error, name_, error);
+    context_->getFrameManager()->transformHasProblems(reference_frame_, rclcpp::Time(), error);
+    Q_EMIT statusUpdate( rviz_common::properties::StatusProperty::Error, name_, error);
     reference_node_->setVisible( false );
     return;
   }
@@ -352,7 +383,7 @@ void InteractiveMarker::updateReferencePose()
 
 void InteractiveMarker::update(float wall_dt)
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   time_since_last_feedback_ += wall_dt;
   if ( frame_locked_ )
   {
@@ -378,8 +409,8 @@ void InteractiveMarker::update(float wall_dt)
     else if ( time_since_last_feedback_ > 0.25 )
     {
       //send keep-alive so we don't use control over the marker
-      visualization_msgs::InteractiveMarkerFeedback feedback;
-      feedback.event_type = visualization_msgs::InteractiveMarkerFeedback::KEEP_ALIVE;
+      visualization_msgs::msg::InteractiveMarkerFeedback feedback;
+      feedback.event_type = visualization_msgs::msg::InteractiveMarkerFeedback::KEEP_ALIVE;
       publishFeedback( feedback );
     }
   }
@@ -387,9 +418,9 @@ void InteractiveMarker::update(float wall_dt)
 
 void InteractiveMarker::publishPose()
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
-  visualization_msgs::InteractiveMarkerFeedback feedback;
-  feedback.event_type = visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE;
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  visualization_msgs::msg::InteractiveMarkerFeedback feedback;
+  feedback.event_type = visualization_msgs::msg::InteractiveMarkerFeedback::POSE_UPDATE;
   feedback.control_name = last_control_name_;
   publishFeedback( feedback );
   pose_changed_ = false;
@@ -397,7 +428,7 @@ void InteractiveMarker::publishPose()
 
 void InteractiveMarker::requestPoseUpdate( Ogre::Vector3 position, Ogre::Quaternion orientation )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if ( dragging_ )
   {
     pose_update_requested_ = true;
@@ -413,7 +444,7 @@ void InteractiveMarker::requestPoseUpdate( Ogre::Vector3 position, Ogre::Quatern
 
 void InteractiveMarker::setPose( Ogre::Vector3 position, Ogre::Quaternion orientation, const std::string &control_name )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   position_ = position;
   orientation_ = orientation;
   pose_changed_ = true;
@@ -435,7 +466,7 @@ void InteractiveMarker::setPose( Ogre::Vector3 position, Ogre::Quaternion orient
 
 void InteractiveMarker::setShowDescription( bool show )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if ( description_control_.get() )
   {
     description_control_->setVisible( show );
@@ -444,13 +475,13 @@ void InteractiveMarker::setShowDescription( bool show )
 
 void InteractiveMarker::setShowAxes( bool show )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   axes_->getSceneNode()->setVisible( show );
 }
 
 void InteractiveMarker::setShowVisualAids( bool show )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   M_ControlPtr::iterator it;
   for ( it = controls_.begin(); it != controls_.end(); it++ )
   {
@@ -461,26 +492,26 @@ void InteractiveMarker::setShowVisualAids( bool show )
 
 void InteractiveMarker::translate( Ogre::Vector3 delta_position, const std::string &control_name )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   setPose( position_+delta_position, orientation_, control_name );
 }
 
 void InteractiveMarker::rotate( Ogre::Quaternion delta_orientation, const std::string &control_name )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   setPose( position_, delta_orientation * orientation_, control_name );
 }
 
 void InteractiveMarker::startDragging()
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   dragging_ = true;
   pose_changed_ = false;
 }
 
 void InteractiveMarker::stopDragging()
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   dragging_ = false;
   if ( pose_update_requested_ )
   {
@@ -490,26 +521,27 @@ void InteractiveMarker::stopDragging()
   }
 }
 
-bool InteractiveMarker::handle3DCursorEvent(ViewportMouseEvent& event, const Ogre::Vector3& cursor_pos, const Ogre::Quaternion& cursor_rot, const std::string &control_name)
+bool InteractiveMarker::handle3DCursorEvent(rviz_common::ViewportMouseEvent& event, const Ogre::Vector3& cursor_pos, const Ogre::Quaternion& cursor_rot, const std::string &control_name)
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  (void) cursor_rot;
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   if( event.acting_button == Qt::LeftButton )
   {
     Ogre::Vector3 point_rel_world = cursor_pos;
     bool got_3D_point = true;
 
-    visualization_msgs::InteractiveMarkerFeedback feedback;
+    visualization_msgs::msg::InteractiveMarkerFeedback feedback;
     feedback.control_name = control_name;
     feedback.marker_name = name_;
 
     // make sure we've published a last pose update
-    feedback.event_type = ((uint8_t)visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE);
+    feedback.event_type = ((uint8_t)visualization_msgs::msg::InteractiveMarkerFeedback::POSE_UPDATE);
     publishFeedback( feedback, got_3D_point, point_rel_world );
 
     feedback.event_type = (event.type == QEvent::MouseButtonPress ?
-                           (uint8_t)visualization_msgs::InteractiveMarkerFeedback::MOUSE_DOWN :
-                           (uint8_t)visualization_msgs::InteractiveMarkerFeedback::MOUSE_UP);
+                           (uint8_t)visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_DOWN :
+                           (uint8_t)visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_UP);
     publishFeedback( feedback, got_3D_point, point_rel_world );
   }
 
@@ -527,7 +559,15 @@ bool InteractiveMarker::handle3DCursorEvent(ViewportMouseEvent& event, const Ogr
       // Save the 3D mouse point to send with the menu feedback, if any.
       Ogre::Vector3 three_d_point = cursor_pos;
       bool valid_point = true;
-      Ogre::Vector2 mouse_pos = project3DPointToViewportXY(event.viewport, cursor_pos);
+      
+      auto viewport =
+        rviz_rendering::RenderWindowOgreAdapter::getOgreViewport(event.panel->getRenderWindow());
+
+      if(viewport == nullptr) 
+        return false;
+
+      Ogre::Vector2 mouse_pos = rviz_rendering::project3DPointToViewportXY(
+      viewport, cursor_pos);
       QCursor::setPos(event.panel->mapToGlobal(QPoint(mouse_pos.x, mouse_pos.y)));
       showMenu( event, control_name, three_d_point, valid_point );
       return true;
@@ -537,27 +577,34 @@ bool InteractiveMarker::handle3DCursorEvent(ViewportMouseEvent& event, const Ogr
   return false;
 }
 
-bool InteractiveMarker::handleMouseEvent(ViewportMouseEvent& event, const std::string &control_name)
+bool InteractiveMarker::handleMouseEvent(rviz_common::ViewportMouseEvent& event, const std::string &control_name)
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  
+  auto viewport =
+    rviz_rendering::RenderWindowOgreAdapter::getOgreViewport(event.panel->getRenderWindow());
+      
+  if(viewport == nullptr) 
+    return false;
 
   if( event.acting_button == Qt::LeftButton )
   {
     Ogre::Vector3 point_rel_world;
+    
     bool got_3D_point =
-      context_->getSelectionManager()->get3DPoint( event.viewport, event.x, event.y, point_rel_world );
+      context_->getViewPicker()->get3DPoint( event.panel, event.x, event.y, point_rel_world );
 
-    visualization_msgs::InteractiveMarkerFeedback feedback;
+    visualization_msgs::msg::InteractiveMarkerFeedback feedback;
     feedback.control_name = control_name;
     feedback.marker_name = name_;
 
     // make sure we've published a last pose update
-    feedback.event_type = ((uint8_t)visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE);
+    feedback.event_type = ((uint8_t)visualization_msgs::msg::InteractiveMarkerFeedback::POSE_UPDATE);
     publishFeedback( feedback, got_3D_point, point_rel_world );
 
     feedback.event_type = (event.type == QEvent::MouseButtonPress ?
-                           (uint8_t)visualization_msgs::InteractiveMarkerFeedback::MOUSE_DOWN :
-                           (uint8_t)visualization_msgs::InteractiveMarkerFeedback::MOUSE_UP);
+                           (uint8_t)visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_DOWN :
+                           (uint8_t)visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_UP);
     publishFeedback( feedback, got_3D_point, point_rel_world );
   }
 
@@ -574,7 +621,7 @@ bool InteractiveMarker::handleMouseEvent(ViewportMouseEvent& event, const std::s
     {
       // Save the 3D mouse point to send with the menu feedback, if any.
       Ogre::Vector3 three_d_point;
-      bool valid_point = context_->getSelectionManager()->get3DPoint( event.viewport, event.x, event.y, three_d_point );
+      bool valid_point = context_->getViewPicker()->get3DPoint( event.panel, event.x, event.y, three_d_point );
       showMenu( event, control_name, three_d_point, valid_point );
       return true;
     }
@@ -584,7 +631,7 @@ bool InteractiveMarker::handleMouseEvent(ViewportMouseEvent& event, const std::s
 }
 
 
-void InteractiveMarker::showMenu( ViewportMouseEvent& event, const std::string &control_name, const Ogre::Vector3 &three_d_point, bool valid_point )
+void InteractiveMarker::showMenu( rviz_common::ViewportMouseEvent& event, const std::string &control_name, const Ogre::Vector3 &three_d_point, bool valid_point )
 {
   // Save the 3D mouse point to send with the menu feedback, if any.
   got_3d_point_for_menu_ = valid_point;
@@ -597,48 +644,48 @@ void InteractiveMarker::showMenu( ViewportMouseEvent& event, const std::string &
 
 void InteractiveMarker::handleMenuSelect( int menu_item_id )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   std::map< uint32_t, MenuNode >::iterator it = menu_entries_.find( menu_item_id );
 
   if ( it != menu_entries_.end() )
   {
-    visualization_msgs::MenuEntry& entry = it->second.entry;
+    visualization_msgs::msg::MenuEntry& entry = it->second.entry;
 
     std::string command = entry.command;
     uint8_t command_type = entry.command_type;
 
-    if ( command_type == visualization_msgs::MenuEntry::FEEDBACK )
+    if ( command_type == visualization_msgs::msg::MenuEntry::FEEDBACK )
     {
-      visualization_msgs::InteractiveMarkerFeedback feedback;
-      feedback.event_type = visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT;
+      visualization_msgs::msg::InteractiveMarkerFeedback feedback;
+      feedback.event_type = visualization_msgs::msg::InteractiveMarkerFeedback::MENU_SELECT;
       feedback.menu_entry_id = entry.id;
       feedback.control_name = last_control_name_;
       publishFeedback( feedback, got_3d_point_for_menu_, three_d_point_for_menu_ );
     }
-    else if ( command_type == visualization_msgs::MenuEntry::ROSRUN )
+    else if ( command_type == visualization_msgs::msg::MenuEntry::ROSRUN )
     {
       std::string sys_cmd = "rosrun " + command;
-      ROS_INFO_STREAM( "Running system command: " << sys_cmd );
-      sys_thread_ = boost::shared_ptr<boost::thread>( new boost::thread( boost::bind( &system, sys_cmd.c_str() ) ) );
+      RVIZ_COMMON_LOG_INFO_STREAM( "Running system command: " << sys_cmd );
+      sys_thread_ = std::shared_ptr<std::thread>( new std::thread( std::bind( &system, sys_cmd.c_str() ) ) );
       //system( sys_cmd.c_str() );
     }
-    else if ( command_type == visualization_msgs::MenuEntry::ROSLAUNCH )
+    else if ( command_type == visualization_msgs::msg::MenuEntry::ROSLAUNCH )
     {
       std::string sys_cmd = "roslaunch " + command;
-      ROS_INFO_STREAM( "Running system command: " << sys_cmd );
-      sys_thread_ = boost::shared_ptr<boost::thread>( new boost::thread( boost::bind( &system, sys_cmd.c_str() ) ) );
+      RVIZ_COMMON_LOG_INFO_STREAM( "Running system command: " << sys_cmd );
+      sys_thread_ = std::shared_ptr<std::thread>( new std::thread( std::bind( &system, sys_cmd.c_str() ) ) );
       //system( sys_cmd.c_str() );
     }
   }
 }
 
 
-void InteractiveMarker::publishFeedback(visualization_msgs::InteractiveMarkerFeedback &feedback,
+void InteractiveMarker::publishFeedback(visualization_msgs::msg::InteractiveMarkerFeedback &feedback,
                                         bool mouse_point_valid,
                                         const Ogre::Vector3& mouse_point_rel_world )
 {
-  boost::recursive_mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 
   feedback.marker_name = name_;
 
@@ -673,7 +720,7 @@ void InteractiveMarker::publishFeedback(visualization_msgs::InteractiveMarkerFee
     feedback.header.frame_id = context_->getFixedFrame().toStdString();
     // This should be ros::Time::now(), but then the computer running
     // RViz has to be time-synced with the server
-    feedback.header.stamp = ros::Time();
+    feedback.header.stamp = rclcpp::Time();
 
     Ogre::Vector3 world_position = reference_node_->convertLocalToWorldPosition( position_ );
     Ogre::Quaternion world_orientation = reference_node_->convertLocalToWorldOrientation( orientation_ );
@@ -696,5 +743,6 @@ void InteractiveMarker::publishFeedback(visualization_msgs::InteractiveMarkerFee
 
   time_since_last_feedback_ = 0;
 }
-
+}
+}
 } // end namespace rviz

@@ -154,6 +154,12 @@ void MarkerBase::setOrientation(const Ogre::Quaternion & orientation)
   scene_node_->setOrientation(orientation);
 }
 
+void MarkerBase::setInteractiveObject(rviz_common::InteractiveObjectWPtr control) {
+  if(handler_) {
+    handler_->setInteractiveObject( control );
+  }
+}
+
 const Ogre::Vector3 & MarkerBase::getPosition()
 {
   return scene_node_->getPosition();
