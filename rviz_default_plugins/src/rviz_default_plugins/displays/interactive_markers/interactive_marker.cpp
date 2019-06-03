@@ -363,11 +363,12 @@ void InteractiveMarker::updateReferencePose()
     }
   }
 
-  if (!context_->getFrameManager()->getTransform( reference_frame_, rclcpp::Time(),
+  rclcpp::Time zero_time(0, 0, context_->getClock()->get_clock_type());
+  if (!context_->getFrameManager()->getTransform( reference_frame_, zero_time,
       reference_position, reference_orientation ))
   {
     std::string error;
-    context_->getFrameManager()->transformHasProblems(reference_frame_, rclcpp::Time(), error);
+    context_->getFrameManager()->transformHasProblems(reference_frame_, zero_time, error);
     Q_EMIT statusUpdate( rviz_common::properties::StatusProperty::Error, name_, error);
     reference_node_->setVisible( false );
     return;

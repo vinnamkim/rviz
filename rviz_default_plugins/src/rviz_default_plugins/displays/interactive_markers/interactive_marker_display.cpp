@@ -93,6 +93,8 @@ InteractiveMarkerDisplay::InteractiveMarkerDisplay()
 
 void InteractiveMarkerDisplay::onInitialize()
 {
+  RTDClass::onInitialize();
+
   topic_property_->setDescription("visualization_msgs::msg::InteractiveMarkerUpdate topic to subscribe to.");
   
   auto tf_wrapper = std::dynamic_pointer_cast<transformation::TFWrapper>(
@@ -290,12 +292,14 @@ void InteractiveMarkerDisplay::updatePoses(
 
 void InteractiveMarkerDisplay::initCb( visualization_msgs::msg::InteractiveMarkerInit::ConstSharedPtr msg )
 {
+  RVIZ_COMMON_LOG_INFO_STREAM("Init Callback : " << msg->server_id);
   resetCb( msg->server_id );
   updateMarkers( msg->server_id, msg->markers );
 }
 
 void InteractiveMarkerDisplay::updateCb( visualization_msgs::msg::InteractiveMarkerUpdate::ConstSharedPtr msg )
 {
+  RVIZ_COMMON_LOG_INFO_STREAM("Update Callback : " << msg->server_id);
   updateMarkers( msg->server_id, msg->markers );
   updatePoses( msg->server_id, msg->poses );
   eraseMarkers( msg->server_id, msg->erases );
