@@ -142,8 +142,8 @@ class VisualizationManagerPrivate
 public:
   // ros::CallbackQueue threaded_queue_;
   // boost::thread_group threaded_queue_threads_;
-  // ros::NodeHandle update_nh_;
-  // ros::NodeHandle threaded_nh_;
+  // rclcpp::Node::SharedPtr update_nh_;
+  // rclcpp::Node::SharedPtr threaded_nh_;
   std::mutex render_mutex_;
 };
 

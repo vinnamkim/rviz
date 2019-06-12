@@ -35,10 +35,10 @@ int main( int argc, char **argv )
 {
   ros::init( argc, argv, "send_grid_cells" );
 
-  ros::NodeHandle nh;
+  rclcpp::Node::SharedPtr nh;
 
   ros::Publisher pub = nh.advertise<nav_msgs::GridCells>("grid_cells", 100);
-  ros::Rate loop_rate( 100 );
+  rclcpp::Rate loop_rate( 100 );
 
   nav_msgs::GridCells msg;
   int width = 500;
@@ -55,7 +55,7 @@ int main( int argc, char **argv )
     {
       for( int y = 0; y < length; y++ )
       {
-        geometry_msgs::Point & point = msg.cells[ x + y * width ];
+        geometry_msgs::msg::Point & point = msg.cells[ x + y * width ];
         point.x = x / 100.0;
         point.y = y / 100.0;
         point.z = sin( x / 100.0 + y / 100.0 + count / 100.0 );

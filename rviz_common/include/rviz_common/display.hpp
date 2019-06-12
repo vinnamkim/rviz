@@ -373,7 +373,7 @@ protected:
   /** @brief A NodeHandle whose CallbackQueue is run from a different thread than the GUI.
    *
    * This is configured after the constructor and before onInitialize() is called. */
-  ros::NodeHandle threaded_nh_;
+  rclcpp::Node::SharedPtr threaded_nh_;
 #endif
 
   /// A convenience variable equal to context_->getFixedFrame().

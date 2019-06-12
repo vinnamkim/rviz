@@ -5,7 +5,7 @@
 #include <rviz/ogre_helpers/arrow.h>
 #include <rviz/ogre_helpers/billboard_line.h>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include "wrench_visual.h"
 

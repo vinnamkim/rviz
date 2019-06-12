@@ -48,10 +48,10 @@ int main( int argc, char **argv )
   }
   const std::string image_format( argv[ 1 ]);
 
-  ros::NodeHandle nh;
+  rclcpp::Node::SharedPtr nh;
   image_transport::ImageTransport it( nh );
   image_transport::Publisher pub = it.advertise("images", 100);
-  ros::Rate loop_rate( 100 );
+  rclcpp::Rate loop_rate( 100 );
 
   if( image_format == "rgb8" )
   {

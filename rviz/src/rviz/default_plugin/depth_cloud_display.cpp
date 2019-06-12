@@ -542,7 +542,7 @@ void DepthCloudDisplay::scanForTransportSubscriberPlugins()
     // it.
     try
     {
-      boost::shared_ptr<image_transport::SubscriberPlugin> sub = sub_loader.createInstance(lookup_name);
+      boost::shared_ptr<image_transport::SubscriberPlugin> sub = sub_loader.createSharedInstance(lookup_name);
       transport_plugin_types_.insert(transport_name);
     }
     catch (const pluginlib::LibraryLoadException& e)
@@ -613,7 +613,7 @@ void DepthCloudDisplay::fixedFrameChanged()
 
 } // namespace rviz
 
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS( rviz::DepthCloudDisplay, rviz::Display)
 

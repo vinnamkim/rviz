@@ -36,7 +36,7 @@ namespace tf
 # undef TF_MESSAGEFILTER_DEBUG
 #endif
 #define TF_MESSAGEFILTER_DEBUG(fmt, ...) \
-  ROS_DEBUG_NAMED("message_filter", "MessageFilter [target=%s]: " fmt, getTargetFramesString().c_str(), __VA_ARGS__)
+  RCLCPP_DEBUG("message_filter", "MessageFilter [target=%s]: " fmt, getTargetFramesString().c_str(), __VA_ARGS__)
 
 #ifdef TF_MESSAGEFILTER_WARN
 # undef TF_MESSAGEFILTER_WARN
@@ -69,7 +69,7 @@ public:
 	 * \param nh The NodeHandle to use for any necessary operations
 	 * \param max_rate The maximum rate to check for newly transformable messages
 	 */
-	MessageFilterJointState(Transformer& tf, const std::string& target_frame, uint32_t queue_size, ros::NodeHandle nh = ros::NodeHandle(), ros::Duration max_rate = ros::Duration(0.01))
+	MessageFilterJointState(Transformer& tf, const std::string& target_frame, uint32_t queue_size, rclcpp::Node::SharedPtr nh = rclcpp::Node::SharedPtr(), ros::Duration max_rate = ros::Duration(0.01))
 	    : MessageFilter<sensor_msgs::JointState>(tf, target_frame, queue_size, nh, max_rate)
             , tf_(tf)
 	    , nh_(nh)
@@ -92,7 +92,7 @@ public:
 	 * \param max_rate The maximum rate to check for newly transformable messages
 	 */
 	template<class F>
-	MessageFilterJointState(F& f, Transformer& tf, const std::string& target_frame, uint32_t queue_size, ros::NodeHandle nh = ros::NodeHandle(), ros::Duration max_rate = ros::Duration(0.01))
+	MessageFilterJointState(F& f, Transformer& tf, const std::string& target_frame, uint32_t queue_size, rclcpp::Node::SharedPtr nh = rclcpp::Node::SharedPtr(), ros::Duration max_rate = ros::Duration(0.01))
 	    : tf_(tf)
 	    , nh_(nh)
 	    , max_rate_(max_rate)
@@ -464,7 +464,7 @@ public:
 	    }
 
 	Transformer& tf_; ///< The Transformer used to determine if transformation data is available
-	ros::NodeHandle nh_; ///< The node used to subscribe to the topic
+	rclcpp::Node::SharedPtr nh_; ///< The node used to subscribe to the topic
 	ros::Duration max_rate_;
 	ros::Timer max_rate_timer_;
 	std::vector<std::string> target_frames_; ///< The frames we need to be able to transform to before a message is ready

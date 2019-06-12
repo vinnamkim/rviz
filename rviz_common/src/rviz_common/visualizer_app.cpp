@@ -255,7 +255,7 @@ bool VisualizerApp::init(int argc, char ** argv)
   //   }
   // }
   //
-  // nh_.reset(new ros::NodeHandle);
+  // nh_.reset(new rclcpp::Node::SharedPtr);
   //
   if (enable_ogre_log) {
     rviz_rendering::OgreLogging::useLogFileAndStandardOut();
@@ -301,7 +301,7 @@ bool VisualizerApp::init(int argc, char ** argv)
   frame_->show();
 
   // TODO(wjwwood): reenable the ROS service to reload the shaders via the ros_integration API
-  // ros::NodeHandle private_nh("~");
+  // rclcpp::Node::SharedPtr private_nh("~");
   // reload_shaders_service_ = private_nh.advertiseService("reload_shaders", reloadShaders);
 
   return true;

@@ -10,7 +10,7 @@ int main( int argc, char** argv )
 {
   ros::init( argc, argv, "cloud_test" );
 
-  ros::NodeHandle n;
+  rclcpp::Node::SharedPtr n;
 
   ros::Publisher rgb_pub = n.advertise<sensor_msgs::PointCloud>( "rgb_cloud_test", 0 );
   ros::Publisher rgb2_pub = n.advertise<sensor_msgs::PointCloud>( "rgb_cloud_test2", 0 );
@@ -58,7 +58,7 @@ int main( int argc, char** argv )
             for (int32_t z = 0; z < zcount; ++z)
             {
               int32_t index = (ycount*zcount*x) + zcount*y + z;
-              geometry_msgs::Point32& point = cloud.points[index];
+              geometry_msgs::msg::Point32& point = cloud.points[index];
               point.x = x * factor;
               point.y = y * factor;
               point.z = z * factor;

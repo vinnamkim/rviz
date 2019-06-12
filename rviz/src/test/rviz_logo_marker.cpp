@@ -92,7 +92,7 @@ void publishCallback(tf::TransformBroadcaster& tf_broadcaster, const ros::TimerE
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "rviz_logo_marker");
-  ros::NodeHandle n;
+  rclcpp::Node::SharedPtr n;
   tf::TransformBroadcaster tf_broadcaster;
 
   ros::Timer publish_timer = n.createTimer(ros::Duration(0.1), boost::bind(&publishCallback,tf_broadcaster,_1));

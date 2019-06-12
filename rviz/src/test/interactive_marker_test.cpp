@@ -29,7 +29,7 @@
 
 
 // %Tag(fullSource)%
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <interactive_markers/interactive_marker_server.h>
 

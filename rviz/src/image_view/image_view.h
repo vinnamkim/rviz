@@ -73,7 +73,7 @@ private:
   Ogre::Camera* camera_;
   ROSImageTexture* texture_;
 
-  ros::NodeHandle nh_;
+  rclcpp::Node::SharedPtr nh_;
 
   image_transport::ImageTransport texture_it_;
   boost::shared_ptr<image_transport::SubscriberFilter> texture_sub_;

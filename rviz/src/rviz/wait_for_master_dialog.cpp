@@ -35,7 +35,7 @@
 
 #include <QTimer>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include "rviz/wait_for_master_dialog.h"
 

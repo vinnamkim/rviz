@@ -33,7 +33,7 @@
 
 #include <QApplication>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #ifdef Q_OS_MAC
 #include <ApplicationServices/ApplicationServices.h>

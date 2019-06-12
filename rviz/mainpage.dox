@@ -78,7 +78,7 @@ classes are:
 
 RViz uses several external libraries which show up in its API.  Here are some of the major ones:
 
-\li <a href="http://www.ros.org/doc/api/roscpp/html/classros_1_1NodeHandle.html">ros::NodeHandle</a>
+\li <a href="http://www.ros.org/doc/api/roscpp/html/classros_1_1NodeHandle.html">rclcpp::Node::SharedPtr</a>
     is one of the main ROS classes, used for subscribing and publishing on topics.
 
 \li <a href="http://www.ros.org/doc/api/roscpp/html/namespaceros.html#a7f5c939b8a0548ca9057392cc78d7ecb">ros::init()</a>
